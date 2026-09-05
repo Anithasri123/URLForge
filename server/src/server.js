@@ -8,6 +8,10 @@ const authRoutes = require('./routes/authRoutes');
 const urlRoutes = require('./routes/urlRoutes');
 const { redirectUrl } = require('./controllers/urlController');
 
+const helmet = require('helmet');
+const { authRateLimiter, apiRateLimiter } = require('./middleware/rateLimiter');
+const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+
 // Ensure models are registered with Mongoose
 require('./models/User');
 require('./models/URL');
@@ -15,8 +19,15 @@ require('./models/URL');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Basic middleware
-app.use(cors());
+// Security & basic middleware
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+);
 app.use(express.json());
 
 // Health check endpoint
@@ -27,14 +38,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Authentication API routes
-app.use('/api/auth', authRoutes);
+// Authentication API routes (protected with auth rate limiter)
+app.use('/api/auth', authRateLimiter, authRoutes);
 
-// URL Shortener API routes
-app.use('/api/urls', urlRoutes);
+// URL Shortener API routes (protected with API rate limiter)
+app.use('/api/urls', apiRateLimiter, urlRoutes);
 
 // Public redirection route (must be mounted after /api routes to avoid route conflicts)
 app.get('/:shortCode', redirectUrl);
+
+// Unknown route fallback (404) & Centralized Error Handler
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // Start server after connecting to MongoDB & Redis
 const startServer = async () => {

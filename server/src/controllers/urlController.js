@@ -6,10 +6,13 @@ const { getCachedUrl, setCachedUrl, deleteCachedUrl } = require('../services/cac
 // Helper URL validator regex
 const URL_REGEX = /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/i;
 
+// Helper shortCode validator regex (6 alphanumeric chars)
+const SHORTCODE_REGEX = /^[a-zA-Z0-9]{6}$/;
+
 // @desc    Create a new shortened URL
 // @route   POST /api/urls
 // @access  Private (Requires Authentication)
-const createUrl = async (req, res) => {
+const createUrl = async (req, res, next) => {
   try {
     const { originalUrl, expiresAt } = req.body;
 
@@ -54,7 +57,7 @@ const createUrl = async (req, res) => {
       return res.status(500).json({ message: 'Failed to generate unique short code. Please try again.' });
     }
 
-    // 4. Save URL document to database
+    // 4. Save URL document to database with server-controlled user ID (Mass Assignment Protection)
     const urlDoc = await URLModel.create({
       originalUrl: trimmedUrl,
       shortCode,
@@ -77,15 +80,14 @@ const createUrl = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(`Create URL Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error creating shortened URL' });
+    return next(error);
   }
 };
 
 // @desc    Get all URLs created by current user
 // @route   GET /api/urls
 // @access  Private (Requires Authentication)
-const getUserUrls = async (req, res) => {
+const getUserUrls = async (req, res, next) => {
   try {
     const urls = await URLModel.find({ userId: req.user._id }).sort({ createdAt: -1 });
 
@@ -104,15 +106,14 @@ const getUserUrls = async (req, res) => {
       urls: formattedUrls
     });
   } catch (error) {
-    console.error(`Get User URLs Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error fetching URLs' });
+    return next(error);
   }
 };
 
 // @desc    Get details of a specific URL by ID
 // @route   GET /api/urls/:id
 // @access  Private (Requires Authentication & Ownership)
-const getUrlById = async (req, res) => {
+const getUrlById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -143,15 +144,14 @@ const getUrlById = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(`Get URL By ID Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error fetching URL details' });
+    return next(error);
   }
 };
 
 // @desc    Get analytics/statistics for a specific URL (Read-only, does NOT increment click count)
 // @route   GET /api/urls/:id/stats
 // @access  Private (Requires Authentication & Ownership)
-const getUrlStats = async (req, res) => {
+const getUrlStats = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -185,15 +185,14 @@ const getUrlStats = async (req, res) => {
       status
     });
   } catch (error) {
-    console.error(`Get URL Stats Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error fetching URL statistics' });
+    return next(error);
   }
 };
 
 // @desc    Delete a URL by ID and invalidate Redis cache
 // @route   DELETE /api/urls/:id
 // @access  Private (Requires Authentication & Ownership)
-const deleteUrl = async (req, res) => {
+const deleteUrl = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -222,17 +221,21 @@ const deleteUrl = async (req, res) => {
 
     return res.status(200).json({ message: 'URL deleted successfully' });
   } catch (error) {
-    console.error(`Delete URL Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error deleting URL' });
+    return next(error);
   }
 };
 
 // @desc    Redirect short code to original URL (Cache-Aside pattern with Redis)
 // @route   GET /:shortCode
 // @access  Public (No Authentication Required)
-const redirectUrl = async (req, res) => {
+const redirectUrl = async (req, res, next) => {
   try {
     const { shortCode } = req.params;
+
+    // ShortCode format validation to reject malformed parameters
+    if (!shortCode || !SHORTCODE_REGEX.test(shortCode)) {
+      return res.status(404).json({ message: 'Short URL not found' });
+    }
 
     // 1. Check Redis cache first (Cache HIT scenario)
     const cached = await getCachedUrl(shortCode);
@@ -278,8 +281,7 @@ const redirectUrl = async (req, res) => {
     // Perform 302 Temporary Redirect to original URL
     return res.redirect(302, urlDoc.originalUrl);
   } catch (error) {
-    console.error(`Redirect Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error during URL redirection' });
+    return next(error);
   }
 };
 

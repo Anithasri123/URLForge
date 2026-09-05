@@ -8,31 +8,40 @@ const generateToken = (id) => {
   });
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
-const registerUser = async (req, res) => {
+const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    // 1. Basic input validation
+    // 1. Basic input & type validation (prevents operator injection attacks)
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Please provide name, email, and password' });
+    }
+
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Invalid input data types' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-
     // 2. Check if user already exists
     const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists with this email' });
+      return res.status(409).json({ message: 'User already exists with this email' });
     }
 
-    // 3. Create user (password will be hashed automatically by pre-save hook in User model)
+    // 3. Create user with explicit fields (mass assignment protection)
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
@@ -49,21 +58,24 @@ const registerUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(`Register Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error during registration' });
+    return next(error);
   }
 };
 
 // @desc    Authenticate user & get token
 // @route   POST /api/auth/login
 // @access  Public
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Input validation
+    // 1. Input & type validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Invalid input data types' });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -88,15 +100,14 @@ const loginUser = async (req, res) => {
     // 4. Generic authentication failure message (prevents user enumeration)
     return res.status(401).json({ message: 'Invalid email or password' });
   } catch (error) {
-    console.error(`Login Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error during login' });
+    return next(error);
   }
 };
 
 // @desc    Get current authenticated user profile
 // @route   GET /api/auth/me
 // @access  Private
-const getMe = async (req, res) => {
+const getMe = async (req, res, next) => {
   try {
     return res.status(200).json({
       user: {
@@ -107,8 +118,7 @@ const getMe = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(`GetMe Error: ${error.message}`);
-    return res.status(500).json({ message: 'Server error fetching user profile' });
+    return next(error);
   }
 };
 

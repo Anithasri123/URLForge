@@ -4,7 +4,7 @@ A secure URL shortener with caching and basic analytics.
 
 ## Current Status
 
-`Phase 6 — Analytics & Expiration`
+`Phase 7 — Security & Robustness`
 
 ## Tech Stack
 
@@ -21,6 +21,8 @@ A secure URL shortener with caching and basic analytics.
 - Redis (Performance Cache & Fallback)
 - bcryptjs (Password Hashing)
 - jsonwebtoken (JWT Authentication)
+- Helmet (HTTP Security Headers)
+- express-rate-limit (Abuse & Brute-Force Rate Limiting)
 
 ### Planned
 - Analytics Dashboard & React UI
@@ -33,7 +35,24 @@ PORT=5000
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/urlforge?retryWrites=true&w=majority
 JWT_SECRET=your_jwt_secret_key_here
 REDIS_URL=redis://username:password@redis-host:6379
+CLIENT_URL=http://localhost:5173
 ```
+
+## Security & Robustness
+
+URLForge incorporates a multi-layered defense-in-depth strategy:
+
+1. **Authentication**: JWT validation (`authMiddleware.js`) with bcrypt password hashing.
+2. **Authorization**: Strict ownership validation (`urlDoc.userId === req.user._id`) on URL detail, stats, and delete operations.
+3. **Helmet**: Sets security HTTP headers (`X-Frame-Options`, `X-Content-Type-Options: nosniff`, `Strict-Transport-Security`, `Content-Security-Policy`).
+4. **CORS**: Explicit origin control tied to `process.env.CLIENT_URL || 'http://localhost:5173'`.
+5. **Rate Limiting**: Protects auth endpoints (`10 reqs/15 min`) against brute-force attacks and API routes (`100 reqs/15 min`).
+6. **Input Validation & Type Hygiene**: Enforces type checks, regex patterns for URLs and emails, and ObjectIDs to prevent MongoDB operator injection.
+7. **Mass Assignment Protection**: Ignores client-supplied `userId` or `clickCount` overrides on creation.
+8. **Centralized Error Handling**: Standardized 404 and Error middleware (`errorHandler.js`) that hides internal database stack traces in production.
+9. **Resilient Fallback**: Graceful fallback to MongoDB if Redis is offline.
+
+> **Limitations Note**: URLForge demonstrates practical backend security fundamentals but is not intended to be a fully hardened production security system.
 
 ## Analytics & Expiration
 
