@@ -148,6 +148,48 @@ const getUrlById = async (req, res) => {
   }
 };
 
+// @desc    Get analytics/statistics for a specific URL (Read-only, does NOT increment click count)
+// @route   GET /api/urls/:id/stats
+// @access  Private (Requires Authentication & Ownership)
+const getUrlStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid URL ID format' });
+    }
+
+    const urlDoc = await URLModel.findById(id);
+
+    if (!urlDoc) {
+      return res.status(404).json({ message: 'URL not found' });
+    }
+
+    // Ownership check: Ensure authenticated user owns this URL
+    if (urlDoc.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Access denied: You do not own this URL' });
+    }
+
+    // Calculate derived status dynamically without storing redundant DB fields
+    const isExpired = urlDoc.expiresAt && new Date() > new Date(urlDoc.expiresAt);
+    const status = isExpired ? 'expired' : 'active';
+
+    return res.status(200).json({
+      id: urlDoc._id,
+      shortCode: urlDoc.shortCode,
+      originalUrl: urlDoc.originalUrl,
+      shortUrl: `${req.protocol}://${req.get('host')}/${urlDoc.shortCode}`,
+      clickCount: urlDoc.clickCount,
+      createdAt: urlDoc.createdAt,
+      expiresAt: urlDoc.expiresAt,
+      status
+    });
+  } catch (error) {
+    console.error(`Get URL Stats Error: ${error.message}`);
+    return res.status(500).json({ message: 'Server error fetching URL statistics' });
+  }
+};
+
 // @desc    Delete a URL by ID and invalidate Redis cache
 // @route   DELETE /api/urls/:id
 // @access  Private (Requires Authentication & Ownership)
@@ -245,6 +287,7 @@ module.exports = {
   createUrl,
   getUserUrls,
   getUrlById,
+  getUrlStats,
   deleteUrl,
   redirectUrl
 };

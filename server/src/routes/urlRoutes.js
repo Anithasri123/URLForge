@@ -3,6 +3,7 @@ const {
   createUrl,
   getUserUrls,
   getUrlById,
+  getUrlStats,
   deleteUrl
 } = require('../controllers/urlController');
 const { protect } = require('../middleware/authMiddleware');
@@ -15,6 +16,8 @@ router.use(protect);
 router.route('/')
   .post(createUrl)
   .get(getUserUrls);
+
+router.get('/:id/stats', getUrlStats);
 
 router.route('/:id')
   .get(getUrlById)
