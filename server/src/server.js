@@ -3,6 +3,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
+const authRoutes = require('./routes/authRoutes');
+
 // Ensure models are registered with Mongoose
 require('./models/User');
 require('./models/URL');
@@ -21,6 +23,9 @@ app.get('/api/health', (req, res) => {
     message: 'URLForge API is running'
   });
 });
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
 
 // Start server after connecting to database
 const startServer = async () => {
