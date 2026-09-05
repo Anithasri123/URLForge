@@ -4,14 +4,14 @@ A secure URL shortener with caching and basic analytics.
 
 ## Current Status
 
-`Phase 7 — Security & Robustness`
+`Phase 8 — React Dashboard`
 
 ## Tech Stack
 
 ### Frontend
-- React
-- Vite
-- Tailwind CSS
+- React 19
+- Vite 8
+- Tailwind CSS v4
 
 ### Backend
 - Node.js
@@ -24,18 +24,19 @@ A secure URL shortener with caching and basic analytics.
 - Helmet (HTTP Security Headers)
 - express-rate-limit (Abuse & Brute-Force Rate Limiting)
 
-### Planned
-- Analytics Dashboard & React UI
-
 ## Environment Variables
 
-Copy `.env.example` to `.env` in `server/` or project root:
+Copy `.env.example` to `.env` in `server/` or project root, and `client/.env.example` to `client/.env`:
 ```env
+# Server (.env)
 PORT=5000
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/urlforge?retryWrites=true&w=majority
 JWT_SECRET=your_jwt_secret_key_here
 REDIS_URL=redis://username:password@redis-host:6379
 CLIENT_URL=http://localhost:5173
+
+# Client (client/.env)
+VITE_API_URL=http://localhost:5000
 ```
 
 ## Security & Robustness
@@ -138,9 +139,24 @@ MongoDB atomic click increment ($inc)
 URLForge/
 ├── client/              # React + Vite frontend
 │   ├── src/
-│   │   ├── App.jsx
-│   │   ├── index.css
-│   │   └── main.jsx
+│   │   ├── components/
+│   │   │   ├── Navbar.jsx       # Top navigation & user session badge
+│   │   │   ├── StatsModal.jsx   # Read-only URL statistics modal
+│   │   │   ├── UrlCard.jsx      # URL item card with Copy/Stats/Delete
+│   │   │   ├── UrlForm.jsx      # URL shortening form with expiration
+│   │   │   └── UrlList.jsx      # URL collection & empty states
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx  # React Context for JWT auth state
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx    # Main protected dashboard
+│   │   │   ├── Login.jsx        # Login page view
+│   │   │   └── Register.jsx     # Registration page view
+│   │   ├── services/
+│   │   │   └── api.js           # Centralized API fetch wrapper
+│   │   ├── App.jsx              # Main App wrapper & view switcher
+│   │   ├── index.css            # Tailwind CSS styling
+│   │   └── main.jsx             # React entry point
+│   ├── .env.example
 │   └── vite.config.js
 │
 ├── server/              # Node.js + Express backend
@@ -152,7 +168,9 @@ URLForge/
 │   │   │   ├── authController.js# Registration, Login, & Profile
 │   │   │   └── urlController.js # Shortener CRUD, Cache-Aside Redirect
 │   │   ├── middleware/
-│   │   │   └── authMiddleware.js# JWT Bearer verification
+│   │   │   ├── authMiddleware.js# JWT Bearer verification
+│   │   │   ├── errorHandler.js  # Centralized error & 404 handler
+│   │   │   └── rateLimiter.js   # Auth & API rate limiters
 │   │   ├── models/
 │   │   │   ├── User.js          # User schema & bcrypt hook
 │   │   │   └── URL.js           # URL schema & indexes
