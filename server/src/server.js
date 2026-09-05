@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
+const { connectRedis } = require('./config/redis');
 const authRoutes = require('./routes/authRoutes');
 const urlRoutes = require('./routes/urlRoutes');
 const { redirectUrl } = require('./controllers/urlController');
@@ -35,10 +36,11 @@ app.use('/api/urls', urlRoutes);
 // Public redirection route (must be mounted after /api routes to avoid route conflicts)
 app.get('/:shortCode', redirectUrl);
 
-// Start server after connecting to database
+// Start server after connecting to MongoDB & Redis
 const startServer = async () => {
   try {
     await connectDB();
+    await connectRedis(); // Resilient connection (doesn't crash if Redis is down)
     app.listen(PORT, () => {
       console.log(`URLForge server listening on port ${PORT}`);
     });

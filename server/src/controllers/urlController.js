@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const URLModel = require('../models/URL');
 const generateShortCode = require('../utils/generateShortCode');
+const { getCachedUrl, setCachedUrl, deleteCachedUrl } = require('../services/cacheService');
 
 // Helper URL validator regex
 const URL_REGEX = /^(https?:\/\/)[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/i;
@@ -147,7 +148,7 @@ const getUrlById = async (req, res) => {
   }
 };
 
-// @desc    Delete a URL by ID
+// @desc    Delete a URL by ID and invalidate Redis cache
 // @route   DELETE /api/urls/:id
 // @access  Private (Requires Authentication & Ownership)
 const deleteUrl = async (req, res) => {
@@ -169,7 +170,13 @@ const deleteUrl = async (req, res) => {
       return res.status(403).json({ message: 'Access denied: You cannot delete another user\'s URL' });
     }
 
+    const shortCode = urlDoc.shortCode;
+
+    // Delete document from MongoDB (source of truth)
     await urlDoc.deleteOne();
+
+    // Cache Invalidation: Delete cached key from Redis to prevent stale redirects
+    await deleteCachedUrl(shortCode);
 
     return res.status(200).json({ message: 'URL deleted successfully' });
   } catch (error) {
@@ -178,25 +185,52 @@ const deleteUrl = async (req, res) => {
   }
 };
 
-// @desc    Redirect short code to original URL & increment click count
+// @desc    Redirect short code to original URL (Cache-Aside pattern with Redis)
 // @route   GET /:shortCode
 // @access  Public (No Authentication Required)
 const redirectUrl = async (req, res) => {
   try {
     const { shortCode } = req.params;
 
+    // 1. Check Redis cache first (Cache HIT scenario)
+    const cached = await getCachedUrl(shortCode);
+
+    if (cached) {
+      // Expiration check on cached payload (URL expiration rules remain authoritative!)
+      if (cached.expiresAt && new Date() > new Date(cached.expiresAt)) {
+        return res.status(410).json({ message: 'Short URL has expired' });
+      }
+
+      // Atomic increment of clickCount in MongoDB (MongoDB remains authoritative for analytics)
+      await URLModel.findOneAndUpdate({ shortCode }, { $inc: { clickCount: 1 } });
+
+      // Perform 302 Temporary Redirect using cached originalUrl
+      return res.redirect(302, cached.originalUrl);
+    }
+
+    // 2. Cache MISS or Redis offline -> Query MongoDB source of truth
     const urlDoc = await URLModel.findOne({ shortCode });
 
     if (!urlDoc) {
       return res.status(404).json({ message: 'Short URL not found' });
     }
 
-    // Expiration check: If expired, return 410 Gone without redirecting or incrementing clicks
+    // Expiration check on MongoDB document
     if (urlDoc.expiresAt && new Date() > new Date(urlDoc.expiresAt)) {
       return res.status(410).json({ message: 'Short URL has expired' });
     }
 
-    // Atomic increment of clickCount using $inc
+    // Populate Redis cache for future requests (TTL: 300s)
+    await setCachedUrl(
+      shortCode,
+      {
+        originalUrl: urlDoc.originalUrl,
+        expiresAt: urlDoc.expiresAt
+      },
+      300
+    );
+
+    // Atomic increment of clickCount in MongoDB
     await URLModel.findByIdAndUpdate(urlDoc._id, { $inc: { clickCount: 1 } });
 
     // Perform 302 Temporary Redirect to original URL
