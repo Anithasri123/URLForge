@@ -4,6 +4,8 @@ require('dotenv').config();
 
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
+const urlRoutes = require('./routes/urlRoutes');
+const { redirectUrl } = require('./controllers/urlController');
 
 // Ensure models are registered with Mongoose
 require('./models/User');
@@ -24,8 +26,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Authentication routes
+// Authentication API routes
 app.use('/api/auth', authRoutes);
+
+// URL Shortener API routes
+app.use('/api/urls', urlRoutes);
+
+// Public redirection route (must be mounted after /api routes to avoid route conflicts)
+app.get('/:shortCode', redirectUrl);
 
 // Start server after connecting to database
 const startServer = async () => {

@@ -4,7 +4,7 @@ A secure URL shortener with caching and basic analytics.
 
 ## Current Status
 
-`Phase 3 — Authentication`
+`Phase 4 — URL Shortening Core`
 
 ## Tech Stack
 
@@ -22,9 +22,8 @@ A secure URL shortener with caching and basic analytics.
 - jsonwebtoken (JWT Authentication)
 
 ### Planned
-- Redis
-- URL Shortening Logic
-- Analytics
+- Redis Caching (Phase 5)
+- Analytics Dashboard & React UI
 
 ## Environment Variables
 
@@ -41,10 +40,20 @@ JWT_SECRET=your_jwt_secret_key_here
 
 | Method | Endpoint | Auth Required | Description |
 | :--- | :--- | :---: | :--- |
-| `POST` | `/api/auth/register` | No | Register a new user (`name`, `email`, `password`) |
-| `POST` | `/api/auth/login` | No | Authenticate user and receive JWT token |
+| `POST` | `/api/auth/register` | No | Register a new user |
+| `POST` | `/api/auth/login` | No | Authenticate user and receive JWT |
 | `GET` | `/api/auth/me` | Yes (`Bearer <token>`) | Fetch current authenticated user profile |
 | `GET` | `/api/health` | No | Health check endpoint |
+
+### URL Shortener Routes (`/api/urls` & `/:shortCode`)
+
+| Method | Endpoint | Auth Required | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/urls` | Yes (`Bearer <token>`) | Create a new shortened URL (`originalUrl`, `expiresAt`) |
+| `GET` | `/api/urls` | Yes (`Bearer <token>`) | List all URLs created by current user |
+| `GET` | `/api/urls/:id` | Yes (`Bearer <token>`) | Get details of a specific URL (Ownership verified) |
+| `DELETE` | `/api/urls/:id` | Yes (`Bearer <token>`) | Delete a specific URL (Ownership verified) |
+| `GET` | `/:shortCode` | No | Public redirect (302) to `originalUrl` & increments click count |
 
 ## Project Structure
 
@@ -60,17 +69,21 @@ URLForge/
 ├── server/              # Node.js + Express backend
 │   ├── src/
 │   │   ├── config/
-│   │   │   └── database.js      # MongoDB connection module
+│   │   │   └── database.js        # MongoDB connection module
 │   │   ├── controllers/
-│   │   │   └── authController.js# Registration, Login, & Profile logic
+│   │   │   ├── authController.js  # Registration, Login, & Profile
+│   │   │   └── urlController.js   # Shortener CRUD & Redirect
 │   │   ├── middleware/
-│   │   │   └── authMiddleware.js# JWT Bearer verification
+│   │   │   └── authMiddleware.js  # JWT Bearer verification
 │   │   ├── models/
-│   │   │   ├── User.js          # User schema with pre-save bcrypt hashing
-│   │   │   └── URL.js           # URL schema
+│   │   │   ├── User.js            # User schema & bcrypt hook
+│   │   │   └── URL.js             # URL schema & indexes
 │   │   ├── routes/
-│   │   │   └── authRoutes.js    # Auth route definitions
-│   │   └── server.js            # Express server entry point
+│   │   │   ├── authRoutes.js      # Auth route definitions
+│   │   │   └── urlRoutes.js       # URL CRUD route definitions
+│   │   ├── utils/
+│   │   │   └── generateShortCode.js # 6-char random code generator
+│   │   └── server.js              # Express server entry point
 │   └── package.json
 │
 ├── .env.example
