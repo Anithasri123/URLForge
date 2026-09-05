@@ -1,0 +1,237 @@
+{
+  "info": {
+    "_postman_id": "urlforge-phase9-collection",
+    "name": "URLForge API Collection",
+    "description": "Postman test collection for URLForge backend API authentication, URL shortener CRUD, analytics stats, redirects, and security controls.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "tokenUserA",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenUserB",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "urlId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shortCode",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User A",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice User\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User A",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register User B",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob User\",\n  \"email\": \"bob@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenUserA}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "URL Management",
+      "item": [
+        {
+          "name": "Create Short URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenUserA}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originalUrl\": \"https://example.com/products/phone\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/urls",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls"]
+            }
+          }
+        },
+        {
+          "name": "List User URLs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenUserA}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/urls",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls"]
+            }
+          }
+        },
+        {
+          "name": "Get URL Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenUserA}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/urls/{{urlId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls", "{{urlId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get URL Statistics (Read-Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenUserA}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/urls/{{urlId}}/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls", "{{urlId}}", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Delete URL",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenUserA}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/urls/{{urlId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls", "{{urlId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Redirects",
+      "item": [
+        {
+          "name": "Public Redirect (GET /:shortCode)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{shortCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{shortCode}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security & Authorization Checks",
+      "item": [
+        {
+          "name": "Unauthorized Deletion (User B -> User A URL)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenUserB}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/urls/{{urlId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls", "{{urlId}}"]
+            }
+          }
+        },
+        {
+          "name": "Missing Authorization Header",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/urls",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "urls"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

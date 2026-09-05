@@ -4,7 +4,7 @@ A secure URL shortener with caching and basic analytics.
 
 ## Current Status
 
-`Phase 8 — React Dashboard`
+`Phase 9 — Testing & Debugging`
 
 ## Tech Stack
 
@@ -23,6 +23,23 @@ A secure URL shortener with caching and basic analytics.
 - jsonwebtoken (JWT Authentication)
 - Helmet (HTTP Security Headers)
 - express-rate-limit (Abuse & Brute-Force Rate Limiting)
+
+## Postman & API Testing
+
+A complete Postman collection is provided in:
+```text
+server/tests/URLForge.postman_collection.json
+```
+
+Import this file into Postman to test authentication, shortener CRUD, analytics stats, redirects, and authorization controls. Set `baseUrl = http://localhost:5000` in the collection variables.
+
+### Tested Scenarios
+1. **Authentication**: Registration (201), duplicate email rejection (409), invalid credentials (401), invalid/expired/missing JWT (401).
+2. **URL CRUD**: Valid URL creation (201), invalid protocol scheme (400), missing fields (400), malformed ID (400), nonexistent ID (404).
+3. **Authorization**: Preventing User B from deleting or reading stats of User A's URL (403 Forbidden).
+4. **Redirects & Expiration**: Active short URLs (302), expired URLs (410 Gone), nonexistent short codes (404 Not Found).
+5. **Redis Caching**: Cache MISS, Cache HIT, 300s TTL verification, cache invalidation on delete, and resilient fallback when Redis is offline.
+6. **Security**: Rate limiting throttling (429 Too Many Requests) and malformed input handling.
 
 ## Environment Variables
 
